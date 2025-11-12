@@ -8,7 +8,9 @@ async function bootstrap() {
   const logger = new Logger('wise_comunidad');
   
   const app = await NestFactory.create(AppModule);
-  await app.listen(envs.port);
+  
+  // Escuchar en 0.0.0.0 para permitir conexiones externas (necesario para Docker)
+  await app.listen(envs.port, '0.0.0.0');
 
   logger.log(`wise_comunidad esta corriendo en el puerto: ${envs.port}`);
 }
