@@ -7,7 +7,7 @@ interface EnvVars {
 }
 
 const envSchema = joi.object({
-    PORT: joi.number(),
+    PORT: joi.number().default(3000),
 })
 .unknown(true);
 
