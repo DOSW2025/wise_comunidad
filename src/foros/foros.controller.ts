@@ -1,8 +1,9 @@
 import { Controller, Post, Body, Get, Param, Query, HttpCode } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiCreatedResponse, ApiBadRequestResponse } from '@nestjs/swagger';
 import { ForosService } from './foros.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { CreatePostDto } from './dto/create-post.dto';
+import { CreateForoDto } from './dto/create-foro.dto';
 
 @ApiTags('Foros')
 @Controller()
@@ -12,6 +13,14 @@ export class ForosController {
   @Get('forums')
   findForums(@Query('page') page?: string) {
     return this.forosService.listForums({ page: Number(page) || 1 });
+  }
+
+  @Post('forums')
+  @HttpCode(201)
+  @ApiCreatedResponse({ description: 'Foro creado exitosamente' })
+  @ApiBadRequestResponse({ description: 'Error al crear el foro' })
+  createForo(@Body() dto: CreateForoDto) {
+    return this.forosService.createForo(dto);
   }
 
   @Post('forums/:slug/threads')

@@ -23,6 +23,7 @@ model materia {
   tema          tema[]
   tutor_materia tutor_materia[]
   tutoria       tutoria[]
+  foros         foro[]
 
   @@index([codigo])
 }
@@ -168,9 +169,13 @@ model foro {
   nombre     String
   descripcion String?
   activo     Boolean   @default(true)
+  materiaId  String
   created_at DateTime  @default(now())
   updated_at DateTime  @default(now())
   hilos      hilo[]
+  materia    materia   @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+
+  @@index([materiaId])
 }
 
 model hilo {
