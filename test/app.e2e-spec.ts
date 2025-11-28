@@ -19,7 +19,7 @@ describe('AppController (e2e)', () => {
   it('/ (GET)', () => {
     return request(app.getHttpServer())
       .get('/')
-      .expect(200)
-      .expect('Hello World!');
+      // No root route defined in the app; expect 404 Not Found
+      .expect(404);
   });
 });

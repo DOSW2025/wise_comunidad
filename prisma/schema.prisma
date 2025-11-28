@@ -126,7 +126,7 @@ model usuarios {
   semestre                            Int             @default(1)
   ultimo_login                        DateTime?
   created_at                          DateTime        @default(now())
-  updated_at                          DateTime
+  updated_at                          DateTime        @default(now())
   avatar_url                          String?
   google_id                           String?         @unique
   estado_id                           Int             @default(1)
@@ -140,6 +140,8 @@ model usuarios {
   tutoria_tutoria_tutorIdTousuarios   tutoria[]       @relation("tutoria_tutorIdTousuarios")
   estados_usuario                     estados_usuario @relation(fields: [estado_id], references: [id])
   roles                               roles           @relation(fields: [rol_id], references: [id])
+  hilos                               hilo[]
+  posts                               post[]
 
   @@index([email])
   @@index([estado_id])
@@ -157,4 +159,55 @@ enum EstadoSesion {
 enum Modalidad {
   VIRTUAL
   PRESENCIAL
+}
+
+// Forum models for community discussions
+model foro {
+  id         Int       @id @default(autoincrement())
+  slug       String    @unique
+  nombre     String
+  descripcion String?
+  activo     Boolean   @default(true)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  hilos      hilo[]
+}
+
+model hilo {
+  id           Int      @id @default(autoincrement())
+  title        String
+  slug         String   @unique
+  forumId      Int
+  authorId     String
+  isPinned     Boolean  @default(false)
+  isLocked     Boolean  @default(false)
+  repliesCount Int      @default(0)
+  views        Int      @default(0)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
+  posts        post[]
+
+  foro         foro     @relation(fields: [forumId], references: [id], onDelete: Cascade)
+  author       usuarios @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([forumId])
+  @@index([authorId])
+}
+
+model post {
+  id         Int      @id @default(autoincrement())
+  threadId   Int
+  authorId   String
+  parentId   Int?
+  content    String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  hilo     hilo      @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author   usuarios  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent   post?     @relation("PostParent", fields: [parentId], references: [id])
+  children post[]    @relation("PostParent")
+
+  @@index([threadId])
+  @@index([authorId])
 }
