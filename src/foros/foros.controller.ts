@@ -1,8 +1,10 @@
 import { Controller, Post, Body, Get, Param, Query, HttpCode } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ForosService } from './foros.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 
+@ApiTags('Foros')
 @Controller()
 export class ForosController {
   constructor(private readonly forosService: ForosService) {}
