@@ -143,6 +143,7 @@ model usuarios {
   roles                               roles           @relation(fields: [rol_id], references: [id])
   hilos                               hilo[]
   posts                               post[]
+  mensajes                            mensaje[]
 
   @@index([email])
   @@index([estado_id])
@@ -173,6 +174,7 @@ model foro {
   created_at DateTime  @default(now())
   updated_at DateTime  @default(now())
   hilos      hilo[]
+  mensajes   mensaje[]
   materia    materia   @relation(fields: [materiaId], references: [id], onDelete: Cascade)
 
   @@index([materiaId])
@@ -215,4 +217,21 @@ model post {
 
   @@index([threadId])
   @@index([authorId])
+}
+
+model mensaje {
+  id         Int      @id @default(autoincrement())
+  forumId    Int
+  authorId   String
+  contenido  String
+  leido      Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  foro       foro     @relation(fields: [forumId], references: [id], onDelete: Cascade)
+  author     usuarios @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([forumId])
+  @@index([authorId])
+  @@index([created_at])
 }
