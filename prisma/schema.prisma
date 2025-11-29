@@ -139,6 +139,8 @@ model usuarios {
   tutor_profile                       tutor_profile?
   tutoria_tutoria_studentIdTousuarios tutoria[]       @relation("tutoria_studentIdTousuarios")
   tutoria_tutoria_tutorIdTousuarios   tutoria[]       @relation("tutoria_tutorIdTousuarios")
+  miembrosGrupoChat                   MiembroGrupoChat[]
+  mensajesChat                        MensajeChat[]
   estados_usuario                     estados_usuario @relation(fields: [estado_id], references: [id])
   roles                               roles           @relation(fields: [rol_id], references: [id])
 
@@ -207,4 +209,50 @@ enum EstadoSesion {
 enum Modalidad {
   VIRTUAL
   PRESENCIAL
+}
+
+// Modelos para sistema de chat grupal
+model GrupoChat {
+  id          String              @id @default(uuid())
+  nombre      String              @unique
+  creadoPor   String
+  fechaCreacion DateTime          @default(now())
+  fechaActualizacion DateTime    @updatedAt
+
+  miembros    MiembroGrupoChat[]
+  mensajes    MensajeChat[]
+
+  @@index([nombre])
+  @@map("grupo_chat")
+}
+
+model MiembroGrupoChat {
+  id          String    @id @default(uuid())
+  grupoId     String
+  usuarioId   String
+  fechaUnion  DateTime  @default(now())
+
+  grupo       GrupoChat @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario     usuarios  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([grupoId, usuarioId])
+  @@index([usuarioId])
+  @@index([grupoId])
+  @@map("miembro_grupo_chat")
+}
+
+model MensajeChat {
+  id          String    @id @default(uuid())
+  grupoId     String
+  usuarioId   String
+  contenido   String    @db.Text
+  fechaCreacion DateTime @default(now())
+  fechaEdicion  DateTime?
+
+  grupo       GrupoChat @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario     usuarios  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([grupoId, fechaCreacion])
+  @@index([usuarioId])
+  @@map("mensaje_chat")
 }
