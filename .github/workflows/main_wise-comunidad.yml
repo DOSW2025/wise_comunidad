@@ -1,12 +1,12 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - wisecomunidad
+name: Build and deploy Node.js app to Azure Web App - wise-comunidad
 
 on:
   push:
     branches:
-      - develop
+      - main
   workflow_dispatch:
 
 jobs:
@@ -27,6 +27,7 @@ jobs:
         run: |
           npm install
           npm run build --if-present
+        
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -50,15 +51,16 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_46A1112AF9E340F79ADE39F1DB1E8AD7 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_43CB328263A44C46830D4669FA74444B }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D26C1917EEC44A03BE3F838348A1E48D }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_37DB093F6D5A4D60BF5F92DB80C1CC65 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_3B5DC3A92BA44FF98465B93B8E7FE6A0 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FBDC039C56BF43BE9922EEF1E08556CD }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'wisecomunidad'
+          app-name: 'wise-comunidad'
           slot-name: 'Production'
           package: .
+
           

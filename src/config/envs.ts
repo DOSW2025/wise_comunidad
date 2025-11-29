@@ -6,6 +6,7 @@ interface EnvVars {
     DATABASE_URL: string;
     DIRECT_URL?: string;
 }
+
 const envsSchema = joi
     .object({
         PORT: joi.number().required(),
@@ -13,10 +14,13 @@ const envsSchema = joi
         DIRECT_URL: joi.string().optional(),
     })
     .unknown(true);
+
 const result = envsSchema.validate(process.env);
+
 if (result.error) {
     throw new Error(`Config validation error: ${result.error.message}`);
 }
+
 const envVars = result.value as EnvVars;
 
 export const envs = {
