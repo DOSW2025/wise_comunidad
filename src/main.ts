@@ -18,9 +18,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-
-  // Escuchar en 0.0.0.0 para permitir conexiones externas (necesario para Docker)
-  await app.listen(envs.port, '0.0.0.0');
+  await app.listen(envs.port);
   logger.log(`Application is running on: ${envs.port}`);
 }
-bootstrap();
+void bootstrap();
