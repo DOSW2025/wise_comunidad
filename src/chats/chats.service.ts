@@ -1,5 +1,5 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
-import { CreateGroupDto } from './dto/creategroup.dto';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { CreateGroupDto, SendMessageDto } from './dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -235,5 +235,111 @@ export class ChatsService {
       success: true,
       message: 'Grupo eliminado correctamente',
     };
+  }
+
+  /**
+   * Valida que un usuario sea miembro de un grupo
+   * @param grupoId - ID del grupo
+   * @param usuarioId - ID del usuario
+   * @throws ForbiddenException si el usuario no es miembro
+   */
+  async validateMembership(grupoId: string, usuarioId: string): Promise<void> {
+    const miembro = await this.prisma.miembroGrupoChat.findUnique({
+      where: {
+        grupoId_usuarioId: {
+          grupoId,
+          usuarioId,
+        },
+      },
+    });
+
+    if (!miembro) {
+      throw new ForbiddenException('No eres miembro de este grupo');
+    }
+  }
+
+  /**
+   * Crea un nuevo mensaje en un grupo
+   * @param sendMessageDto - Datos del mensaje (grupoId y contenido)
+   * @param usuarioId - ID del usuario que envía el mensaje
+   * @returns El mensaje creado con información del usuario
+   */
+  async sendMessage(sendMessageDto: SendMessageDto, usuarioId: string) {
+    const { grupoId, contenido } = sendMessageDto;
+
+    // 1. Validar que el grupo exista
+    const grupo = await this.prisma.grupoChat.findUnique({
+      where: { id: grupoId },
+    });
+
+    if (!grupo) {
+      throw new BadRequestException('El grupo no existe');
+    }
+
+    // 2. Validar que el usuario sea miembro del grupo
+    await this.validateMembership(grupoId, usuarioId);
+
+    // 3. Crear el mensaje
+    const mensaje = await this.prisma.mensajeChat.create({
+      data: {
+        grupoId,
+        usuarioId,
+        contenido,
+      },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+            avatar_url: true,
+          },
+        },
+      },
+    });
+
+    return mensaje;
+  }
+
+  /**
+   * Obtiene todos los mensajes de un grupo
+   * @param grupoId - ID del grupo
+   * @param usuarioId - ID del usuario que solicita los mensajes
+   * @returns Lista de mensajes ordenados cronológicamente
+   */
+  async getMessages(grupoId: string, usuarioId: string) {
+    // 1. Validar que el grupo exista
+    const grupo = await this.prisma.grupoChat.findUnique({
+      where: { id: grupoId },
+    });
+
+    if (!grupo) {
+      throw new BadRequestException('El grupo no existe');
+    }
+
+    // 2. Validar que el usuario sea miembro del grupo
+    await this.validateMembership(grupoId, usuarioId);
+
+    // 3. Obtener mensajes
+    const mensajes = await this.prisma.mensajeChat.findMany({
+      where: { grupoId },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+            avatar_url: true,
+          },
+        },
+      },
+      orderBy: {
+        fechaCreacion: 'asc',
+      },
+    });
+
+    return mensajes;
   }
 }
