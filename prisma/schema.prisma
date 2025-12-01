@@ -140,6 +140,14 @@ model usuarios {
   tutoria_tutoria_tutorIdTousuarios   tutoria[]       @relation("tutoria_tutorIdTousuarios")
   estados_usuario                     estados_usuario @relation(fields: [estado_id], references: [id])
   roles                               roles           @relation(fields: [rol_id], references: [id])
+  
+  // Relaciones de reportes
+  reportesCreados                     reporte[]       @relation("ReporteReporter")
+  reportesRecibidos                   reporte[]       @relation("ReporteReportedUser")
+  reportesResueltos                   reporte[]       @relation("ReporteResolver")
+  
+  // Logs de auditoría
+  audit_logs                          audit_log[]
 
   @@index([email])
   @@index([estado_id])
@@ -157,4 +165,104 @@ enum EstadoSesion {
 enum Modalidad {
   VIRTUAL
   PRESENCIAL
+}
+
+// ============================================
+// SISTEMA DE REPORTES (RB-01 y RB-02)
+// ============================================
+
+model reporte {
+  id              Int            @id @default(autoincrement())
+  
+  // Usuario que realiza el reporte
+  reporterId      String
+  reporter        usuarios       @relation("ReporteReporter", fields: [reporterId], references: [id])
+  
+  // Usuario reportado (opcional, puede ser contenido sin usuario específico)
+  reportedUserId  String?
+  reportedUser    usuarios?      @relation("ReporteReportedUser", fields: [reportedUserId], references: [id])
+  
+  // Entidad reportada
+  tipoEntidad     TipoEntidadReporte
+  entidadId       String         // ID de la tutoría, material, comentario, etc.
+  
+  // Detalles del reporte
+  motivo          MotivoReporte
+  descripcion     String
+  evidenciaUrl    String?        // URL de captura de pantalla u otra evidencia
+  
+  // Estado y resolución
+  estado          EstadoReporte  @default(PENDIENTE)
+  resolucion      String?        // Comentario del admin sobre la resolución
+  
+  // Administrador que resolvió
+  resolvedById    String?
+  resolvedBy      usuarios?      @relation("ReporteResolver", fields: [resolvedById], references: [id])
+  resolvedAt      DateTime?
+  
+  // Auditoría (RB-02)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([estado])
+  @@index([tipoEntidad, entidadId])
+}
+
+// Log de auditoría para cambios críticos (RB-02)
+model audit_log {
+  id            Int      @id @default(autoincrement())
+  
+  userId        String   // Usuario que realizó la acción
+  usuario       usuarios @relation(fields: [userId], references: [id])
+  
+  accion        String   // CREATE, UPDATE, DELETE, RESOLVE_REPORT, etc.
+  entidad       String   // Nombre de la tabla afectada
+  entidadId     String   // ID del registro afectado
+  
+  datoAnterior  Json?    // Estado anterior (para UPDATE/DELETE)
+  datoNuevo     Json?    // Estado nuevo (para CREATE/UPDATE)
+  
+  ipAddress     String?
+  userAgent     String?
+  
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([entidad, entidadId])
+  @@index([createdAt])
+}
+
+enum TipoEntidadReporte {
+  TUTORIA
+  USUARIO
+  MATERIAL
+  COMENTARIO_FORO
+  MENSAJE_CHAT
+}
+
+enum MotivoReporte {
+  // Contenido
+  CONTENIDO_SPAM
+  CONTENIDO_OFENSIVO
+  VIOLACION_DERECHOS_AUTOR
+  INFORMACION_ERRONEA
+  
+  // Usuarios/Tutorías
+  AUSENCIA_TUTOR
+  COMPORTAMIENTO_INAPROPIADO
+  SUPLANTACION_IDENTIDAD
+  COBROS_INDEBIDOS
+  
+  // Otros
+  OTRO
+}
+
+enum EstadoReporte {
+  PENDIENTE
+  EN_REVISION
+  RESUELTO_DESESTIMADO
+  RESUELTO_ADVERTENCIA
+  RESUELTO_SANCION
 }
