@@ -1,35 +1,32 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
 import { CreateGroupDto, SendMessageDto } from './dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ChatsService {
   constructor(private readonly prisma: PrismaService) {}
-
+   private readonly logger = new Logger(ChatsService.name);
   /**
    * Valida que todos los correos existan en la base de datos
    * @param emails - Lista de correos a validar
-   * @throws BadRequestException si algún correo no existe
+   * @throws BadRequestException si algún correo no exief594c4e-5569-4298-9964-41ca4accc03aste
    */
   private async validateEmails(emails: string[]): Promise<void> {
-    const usuarios = await this.prisma.usuarios.findMany({
-      where: {
-        email: {
-          in: emails,
-        },
-      },
-      select: {
-        email: true,
-      },
-    });
-
-    const correosEncontrados = usuarios.map((u) => u.email);
-    const correosNoEncontrados = emails.filter(
-      (email) => !correosEncontrados.includes(email),
+    // Búsqueda en paralelo de todos los emails usando Promise.all
+    const resultados = await Promise.all(
+      emails.map(email =>
+        this.prisma.usuarios.findUnique({
+          where: { email },
+          select: { email: true }
+        })
+      )
     );
 
+    // Identificar correos no encontrados
+    const correosNoEncontrados = emails.filter((email, index) => !resultados[index]);
+
     if (correosNoEncontrados.length > 0) {
-      throw new BadRequestException(
+      throw new NotFoundException(
         `Los siguientes correos no están registrados: ${correosNoEncontrados.join(', ')}`,
       );
     }
@@ -244,6 +241,8 @@ export class ChatsService {
    * @throws ForbiddenException si el usuario no es miembro
    */
   async validateMembership(grupoId: string, usuarioId: string): Promise<void> {
+    console.log(`[validateMembership] Buscando: grupoId="${grupoId}", usuarioId="${usuarioId}"`);
+
     const miembro = await this.prisma.miembroGrupoChat.findUnique({
       where: {
         grupoId_usuarioId: {
@@ -253,7 +252,15 @@ export class ChatsService {
       },
     });
 
+    console.log(`[validateMembership] Miembro encontrado:`, miembro);
+
     if (!miembro) {
+      // Buscar todos los miembros del grupo para debug
+      const todosMiembros = await this.prisma.miembroGrupoChat.findMany({
+        where: { grupoId },
+      });
+      console.log(`[validateMembership] Todos los miembros del grupo:`, todosMiembros);
+
       throw new ForbiddenException('No eres miembro de este grupo');
     }
   }

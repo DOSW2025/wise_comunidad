@@ -6,6 +6,7 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger, UnauthorizedException } from '@nestjs/common';
@@ -27,12 +28,14 @@ import { ChatsService } from './chats.service';
  */
 @WebSocketGateway({
   cors: {
-    origin: '*', // TODO: Configurar con la URL del frontend en producción
+    origin: '*',
     credentials: true,
+    methods: ['GET', 'POST'],
   },
-  namespace: '/chat', // Namespace específico para chat: ws://host:port/chat
+  transports: ['websocket', 'polling'],
+  namespace: '/chat',
 })
-export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -41,22 +44,38 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsService: ChatsService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    this.logger.log('[GATEWAY] ChatGateway inicializado en namespace /chat');
+  }
+
+  /**
+   * Se ejecuta cuando el servidor WebSocket está listo
+   */
+  afterInit(server: Server) {
+    this.logger.log('[GATEWAY] Servidor WebSocket iniciado correctamente');
+    this.logger.log('[GATEWAY] Escuchando en namespace: /chat');
+  }
 
   /**
    * Se ejecuta cuando un cliente intenta conectarse al WebSocket
    * Valida el token JWT antes de permitir la conexión
    */
   async handleConnection(client: Socket) {
+    this.logger.log(`[CONEXION] Nueva conexión recibida - Socket ID: ${client.id}`);
+    this.logger.log(`[CONEXION] Handshake auth:`, JSON.stringify(client.handshake.auth));
+    this.logger.log(`[CONEXION] Handshake query:`, JSON.stringify(client.handshake.query));
+
     try {
-      // 1. Obtener el token del handshake
-      const token = client.handshake.auth?.token;
+      // 1. Obtener el token del handshake (auth o query)
+      const token = client.handshake.auth?.token || client.handshake.query?.token as string;
 
       if (!token) {
-        this.logger.warn(`Cliente rechazado: No se proporcionó token`);
+        this.logger.warn(`[RECHAZO] Cliente rechazado: No se proporcionó token`);
         client.disconnect();
         return;
       }
+
+      this.logger.log(`[TOKEN] Token recibido: ${token.substring(0, 20)}...`);
 
       // 2. Verificar el token JWT
       const payload = await this.jwtService.verifyAsync(token);
@@ -75,6 +94,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(
         `Usuario autenticado: ${payload.email} (${payload.sub})`,
       );
+      
     } catch (error) {
       this.logger.error(`Error de autenticación: ${error.message}`);
       client.disconnect();
@@ -103,10 +123,31 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('joinGroup')
   async handleJoinGroup(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { grupoId: string },
+    @MessageBody() payload: { grupoId: string } | string,
   ) {
     const userId = client.data.userId;
-    const { grupoId } = payload;
+
+    // Debug: ver qué está llegando
+    this.logger.debug(`[joinGroup] Payload recibido: ${JSON.stringify(payload)}`);
+    this.logger.debug(`[joinGroup] Tipo de payload: ${typeof payload}`);
+
+    // Manejar diferentes formatos de payload
+    let grupoId: string = '';
+
+    if (typeof payload === 'string') {
+      // Si es string, puede ser JSON o el ID directo
+      try {
+        const parsed = JSON.parse(payload);
+        grupoId = parsed.grupoId;
+      } catch {
+        // Si no es JSON válido, es el ID directo
+        grupoId = payload;
+      }
+    } else if (payload && typeof payload === 'object') {
+      grupoId = payload.grupoId;
+    }
+
+    this.logger.debug(`[joinGroup] GrupoId extraído: "${grupoId}"`);
 
     try {
       // Validar que el usuario sea miembro del grupo
@@ -147,10 +188,23 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('leaveGroup')
   async handleLeaveGroup(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { grupoId: string },
+    @MessageBody() payload: { grupoId: string } | string,
   ) {
     const userId = client.data.userId;
-    const { grupoId } = payload;
+
+    // Manejar diferentes formatos de payload
+    let grupoId: string = '';
+
+    if (typeof payload === 'string') {
+      try {
+        const parsed = JSON.parse(payload);
+        grupoId = parsed.grupoId;
+      } catch {
+        grupoId = payload;
+      }
+    } else if (payload && typeof payload === 'object') {
+      grupoId = payload.grupoId;
+    }
 
     // Remover al cliente de la sala del grupo
     client.leave(grupoId);
@@ -180,10 +234,43 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { grupoId: string; contenido: string },
+    @MessageBody() payload: { grupoId: string; contenido: string } | string,
   ) {
     const userId = client.data.userId;
-    const { grupoId, contenido } = payload;
+
+    // Debug: ver qué está llegando
+    this.logger.debug(`[sendMessage] Payload recibido: ${JSON.stringify(payload)}`);
+    this.logger.debug(`[sendMessage] Tipo de payload: ${typeof payload}`);
+
+    // Manejar diferentes formatos de payload
+    let grupoId: string = '';
+    let contenido: string = '';
+
+    if (typeof payload === 'string') {
+      try {
+        const parsed = JSON.parse(payload);
+        grupoId = parsed.grupoId;
+        contenido = parsed.contenido;
+      } catch {
+        this.logger.error('[sendMessage] Error: payload es string pero no es JSON válido');
+        return { success: false, message: 'Formato de payload inválido' };
+      }
+    } else if (payload && typeof payload === 'object') {
+      grupoId = payload.grupoId;
+      contenido = payload.contenido;
+    }
+
+    this.logger.debug(`[sendMessage] GrupoId: "${grupoId}", Contenido: "${contenido}"`);
+
+    // Verificar si el cliente está en la sala del grupo
+    const rooms = Array.from(client.rooms);
+    if (!rooms.includes(grupoId)) {
+      this.logger.warn(`[sendMessage] Usuario ${userId} intentó enviar mensaje sin estar en la sala ${grupoId}`);
+      return {
+        success: false,
+        message: 'Debes unirte al grupo antes de enviar mensajes (usa joinGroup)',
+      };
+    }
 
     try {
       // Crear el mensaje en la base de datos
@@ -231,10 +318,29 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('typing')
   async handleTyping(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { grupoId: string },
+    @MessageBody() payload: { grupoId: string } | string,
   ) {
     const userId = client.data.userId;
-    const { grupoId } = payload;
+
+    // Manejar diferentes formatos de payload
+    let grupoId: string = '';
+
+    if (typeof payload === 'string') {
+      try {
+        const parsed = JSON.parse(payload);
+        grupoId = parsed.grupoId;
+      } catch {
+        grupoId = payload;
+      }
+    } else if (payload && typeof payload === 'object') {
+      grupoId = payload.grupoId;
+    }
+
+    // Verificar si el cliente está en la sala del grupo
+    const rooms = Array.from(client.rooms);
+    if (!rooms.includes(grupoId)) {
+      return;
+    }
 
     // Emitir a todos EXCEPTO al emisor
     client.to(grupoId).emit('userTyping', {
@@ -251,10 +357,29 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('stopTyping')
   async handleStopTyping(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { grupoId: string },
+    @MessageBody() payload: { grupoId: string } | string,
   ) {
     const userId = client.data.userId;
-    const { grupoId } = payload;
+
+    // Manejar diferentes formatos de payload
+    let grupoId: string = '';
+
+    if (typeof payload === 'string') {
+      try {
+        const parsed = JSON.parse(payload);
+        grupoId = parsed.grupoId;
+      } catch {
+        grupoId = payload;
+      }
+    } else if (payload && typeof payload === 'object') {
+      grupoId = payload.grupoId;
+    }
+
+    // Verificar si el cliente está en la sala del grupo
+    const rooms = Array.from(client.rooms);
+    if (!rooms.includes(grupoId)) {
+      return;
+    }
 
     // Emitir a todos EXCEPTO al emisor
     client.to(grupoId).emit('userStoppedTyping', {

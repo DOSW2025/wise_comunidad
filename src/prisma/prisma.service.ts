@@ -15,7 +15,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     super({
       adapter,
-      log: ['error', 'warn'],
+      log: ['error', 'warn', 'query'],
     });
 
     this.pool = pool;
