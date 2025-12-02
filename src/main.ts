@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { envs } from './config/envs';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const logger = new Logger('ComunidadApp');
@@ -19,18 +19,24 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-
-  
-  const config = new DocumentBuilder()
-    .setTitle('API Wise Comunidad')
-    .setDescription('Documentación API para el microservicio de comunidad')
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Wise Comunidad API')
+    .setDescription('Community API documentation')
     .setVersion('1.0')
     .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api', app, document);
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
-
-  await app.listen(envs.port, '0.0.0.0');
-  logger.log(`La aplicacción esta corriendo en: ${envs.port}`);
+  // DEBUG: print all documented paths to help troubleshooting missing endpoints
+  try {
+    const paths = Object.keys(document.paths || {});
+    console.log('[DEBUG] Swagger documented paths:', paths);
+  } catch (e) {
+    console.error('[DEBUG] Failed to list Swagger paths', e);
+  }
+  await app.listen(envs.port);
+  // exact informational line requested by user (uses configured port)
+  logger.log(`Application is running on: ${envs.port}`);
+    console.log(`[INFO] Server is running on http://localhost:${envs.port}`);
 }
 bootstrap();
