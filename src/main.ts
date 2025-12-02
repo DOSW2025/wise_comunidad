@@ -22,8 +22,8 @@ async function bootstrap() {
 
   
   const config = new DocumentBuilder()
-    .setTitle('Wise Comunidad API')
-    .setDescription('API documentation for the Wise Comunidad microservice')
+    .setTitle('API Wise Comunidad')
+    .setDescription('Documentación API para el microservicio de comunidad')
     .setVersion('1.0')
     .build();
 
@@ -31,6 +31,6 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(envs.port, '0.0.0.0');
-  logger.log(`Application is running on: ${envs.port}`);
+  logger.log(`La aplicacción esta corriendo en: ${envs.port}`);
 }
 bootstrap();
