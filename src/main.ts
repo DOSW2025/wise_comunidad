@@ -20,7 +20,7 @@ async function bootstrap() {
     }),
   );
 
-  // 🔥 Swagger setup
+  
   const config = new DocumentBuilder()
     .setTitle('Wise Comunidad API')
     .setDescription('API documentation for the Wise Comunidad microservice')
