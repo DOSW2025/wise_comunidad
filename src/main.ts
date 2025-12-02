@@ -19,8 +19,6 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-
-  // Swagger setup (exposed at /api)
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Wise Comunidad API')
     .setDescription('Community API documentation')
@@ -41,4 +39,4 @@ async function bootstrap() {
   logger.log(`Application is running on: ${envs.port}`);
     console.log(`[INFO] Server is running on http://localhost:${envs.port}`);
 }
-void bootstrap();
+bootstrap();
