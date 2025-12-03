@@ -16,7 +16,7 @@ export enum TipoEntidadReporte {
   USUARIO = 'USUARIO',
   MATERIAL = 'MATERIAL',
   COMENTARIO_FORO = 'COMENTARIO_FORO',
-  MENSAJE_CHAT = 'MENSAJE_CHAT',
+  GRUPO_CHAT = 'GRUPO_CHAT',
 }
 
 /**
@@ -46,7 +46,7 @@ export enum MotivoReporte {
 export class CreateReporteDto {
   @IsEnum(TipoEntidadReporte, {
     message:
-      'El tipo de entidad debe ser: TUTORIA, USUARIO, MATERIAL, COMENTARIO_FORO o MENSAJE_CHAT',
+      'El tipo de entidad debe ser: TUTORIA, USUARIO, MATERIAL, COMENTARIO_FORO o GRUPO_CHAT',
   })
   @IsNotEmpty({ message: 'El tipo de entidad es requerido' })
   tipoEntidad: TipoEntidadReporte;

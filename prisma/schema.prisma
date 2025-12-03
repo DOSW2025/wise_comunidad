@@ -118,40 +118,134 @@ model tutoria {
 }
 
 model usuarios {
-  id                                  String          @id
-  email                               String          @unique
+  id                                  String             @id
+  email                               String             @unique
   nombre                              String
   apellido                            String
   telefono                            String?
-  semestre                            Int             @default(1)
-  ultimo_login                        DateTime?
-  created_at                          DateTime        @default(now())
-  updated_at                          DateTime
-  avatar_url                          String?
-  google_id                           String?         @unique
-  estado_id                           Int             @default(1)
-  rol_id                              Int             @default(1)
   biografia                           String?
+  semestre                            Int                @default(1)
+  google_id                           String?            @unique
+  avatar_url                          String?
+  rol_id                              Int                @default(1)
+  estado_id                           Int                @default(1)
+  ultimo_login                        DateTime?
   disponibilidad                      Json?
+  created_at                          DateTime           @default(now())
+  updated_at                          DateTime
+  Materiales                          Materiales[]
+  mensajesChat                        MensajeChat[]
+  miembrosGrupoChat                   MiembroGrupoChat[]
   notifications                       notifications[]
   rating                              rating[]
   tutor_profile                       tutor_profile?
-  tutoria_tutoria_studentIdTousuarios tutoria[]       @relation("tutoria_studentIdTousuarios")
-  tutoria_tutoria_tutorIdTousuarios   tutoria[]       @relation("tutoria_tutorIdTousuarios")
-  estados_usuario                     estados_usuario @relation(fields: [estado_id], references: [id])
-  roles                               roles           @relation(fields: [rol_id], references: [id])
-  
+  tutoria_tutoria_studentIdTousuarios tutoria[]          @relation("tutoria_studentIdTousuarios")
+  tutoria_tutoria_tutorIdTousuarios   tutoria[]          @relation("tutoria_tutorIdTousuarios")
+  estados_usuario                     estados_usuario    @relation(fields: [estado_id], references: [id])
+  roles                               roles              @relation(fields: [rol_id], references: [id])
+
   // Relaciones de reportes
-  reportesCreados                     reporte[]       @relation("ReporteReporter")
-  reportesRecibidos                   reporte[]       @relation("ReporteReportedUser")
-  reportesResueltos                   reporte[]       @relation("ReporteResolver")
-  
+  reportesCreados                     reporte[]          @relation("ReporteReporter")
+  reportesRecibidos                   reporte[]          @relation("ReporteReportedUser")
+  reportesResueltos                   reporte[]          @relation("ReporteResolver")
+
   // Logs de auditoría
   audit_logs                          audit_log[]
 
   @@index([email])
   @@index([estado_id])
   @@index([rol_id])
+}
+
+model Calificaciones {
+  id           Int        @id @default(autoincrement())
+  idMaterial   String
+  calificacion Int
+  comentario   String?
+  createdAt    DateTime   @default(now())
+  Materiales   Materiales @relation(fields: [idMaterial], references: [id], onDelete: Cascade)
+}
+
+model MaterialTags {
+  idTag      Int
+  idMaterial String
+  Materiales Materiales @relation(fields: [idMaterial], references: [id], onDelete: Cascade)
+  Tags       Tags       @relation(fields: [idTag], references: [id], onDelete: Cascade)
+
+  @@id([idTag, idMaterial])
+  @@index([idMaterial])
+}
+
+model Materiales {
+  id             String           @id
+  nombre         String
+  userId         String
+  url            String
+  descripcion    String?
+  vistos         Int              @default(0)
+  descargas      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  hash           String?          @unique
+  updatedAt      DateTime
+  Calificaciones Calificaciones[]
+  MaterialTags   MaterialTags[]
+  usuarios       usuarios         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Resumen        Resumen[]
+}
+
+model Resumen {
+  id         Int        @id @default(autoincrement())
+  idMaterial String
+  resumen    String
+  Materiales Materiales @relation(fields: [idMaterial], references: [id], onDelete: Cascade)
+}
+
+model Tags {
+  id           Int            @id @default(autoincrement())
+  tag          String         @unique
+  MaterialTags MaterialTags[]
+}
+
+model GrupoChat {
+  id                 String             @id @default(uuid())
+  nombre             String             @unique
+  creadoPor          String
+  fechaCreacion      DateTime           @default(now())
+  fechaActualizacion DateTime           @updatedAt
+  mensajes           MensajeChat[]
+  miembros           MiembroGrupoChat[]
+
+  @@index([nombre])
+  @@map("grupo_chat")
+}
+
+model MiembroGrupoChat {
+  id         String    @id @default(uuid())
+  grupoId    String
+  usuarioId  String
+  fechaUnion DateTime  @default(now())
+  grupo      GrupoChat @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario    usuarios  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([grupoId, usuarioId])
+  @@index([usuarioId])
+  @@index([grupoId])
+  @@map("miembro_grupo_chat")
+}
+
+model MensajeChat {
+  id            String    @id @default(uuid())
+  grupoId       String
+  usuarioId     String
+  contenido     String
+  fechaCreacion DateTime  @default(now())
+  fechaEdicion  DateTime?
+  grupo         GrupoChat @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario       usuarios  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([grupoId, fechaCreacion])
+  @@index([usuarioId])
+  @@map("mensaje_chat")
 }
 
 enum EstadoSesion {
@@ -167,42 +261,38 @@ enum Modalidad {
   PRESENCIAL
 }
 
-// ============================================
-// SISTEMA DE REPORTES (RB-01 y RB-02)
-// ============================================
-
 model reporte {
-  id              Int            @id @default(autoincrement())
-  
+  id             Int                @id @default(autoincrement())
+
   // Usuario que realiza el reporte
-  reporterId      String
-  reporter        usuarios       @relation("ReporteReporter", fields: [reporterId], references: [id])
-  
+  reporterId     String
+  reporter       usuarios           @relation("ReporteReporter", fields: [reporterId], references: [id])
+
   // Usuario reportado (opcional, puede ser contenido sin usuario específico)
-  reportedUserId  String?
-  reportedUser    usuarios?      @relation("ReporteReportedUser", fields: [reportedUserId], references: [id])
-  
+  reportedUserId String?
+  reportedUser   usuarios?          @relation("ReporteReportedUser", fields: [reportedUserId], references: [id])
+
   // Entidad reportada
-  tipoEntidad     TipoEntidadReporte
-  entidadId       String         // ID de la tutoría, material, comentario, etc.
-  
+  tipoEntidad    TipoEntidadReporte
+  entidadId      String             // ID de la tutoría, material, mensaje, etc.
+
   // Detalles del reporte
-  motivo          MotivoReporte
-  descripcion     String
-  evidenciaUrl    String?        // URL de captura de pantalla u otra evidencia
-  
+  motivo         MotivoReporte
+  descripcion    String
+  evidenciaUrl   String?            // URL de captura de pantalla u otra evidencia
+
   // Estado y resolución
-  estado          EstadoReporte  @default(PENDIENTE)
-  resolucion      String?        // Comentario del admin sobre la resolución
-  
+  estado         EstadoReporte      @default(PENDIENTE)
+  resolucion     String?            // Comentario del admin sobre la resolución
+
   // Administrador que resolvió
-  resolvedById    String?
-  resolvedBy      usuarios?      @relation("ReporteResolver", fields: [resolvedById], references: [id])
-  resolvedAt      DateTime?
-  
+  resolvedById   String?
+  resolvedBy     usuarios?          @relation("ReporteResolver", fields: [resolvedById], references: [id])
+  resolvedAt     DateTime?
+
   // Auditoría (RB-02)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([reporterId])
   @@index([reportedUserId])
@@ -212,22 +302,22 @@ model reporte {
 
 // Log de auditoría para cambios críticos (RB-02)
 model audit_log {
-  id            Int      @id @default(autoincrement())
-  
-  userId        String   // Usuario que realizó la acción
-  usuario       usuarios @relation(fields: [userId], references: [id])
-  
-  accion        String   // CREATE, UPDATE, DELETE, RESOLVE_REPORT, etc.
-  entidad       String   // Nombre de la tabla afectada
-  entidadId     String   // ID del registro afectado
-  
-  datoAnterior  Json?    // Estado anterior (para UPDATE/DELETE)
-  datoNuevo     Json?    // Estado nuevo (para CREATE/UPDATE)
-  
-  ipAddress     String?
-  userAgent     String?
-  
-  createdAt     DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+
+  userId       String   // Usuario que realizó la acción
+  usuario      usuarios @relation(fields: [userId], references: [id])
+
+  accion       String   // CREATE, UPDATE, DELETE, RESOLVE_REPORT, etc.
+  entidad      String   // Nombre de la tabla afectada
+  entidadId    String   // ID del registro afectado
+
+  datoAnterior Json?    // Estado anterior (para UPDATE/DELETE)
+  datoNuevo    Json?    // Estado nuevo (para CREATE/UPDATE)
+
+  ipAddress    String?
+  userAgent    String?
+
+  createdAt    DateTime @default(now())
 
   @@index([userId])
   @@index([entidad, entidadId])
@@ -239,7 +329,7 @@ enum TipoEntidadReporte {
   USUARIO
   MATERIAL
   COMENTARIO_FORO
-  MENSAJE_CHAT
+  GRUPO_CHAT
 }
 
 enum MotivoReporte {
@@ -248,13 +338,13 @@ enum MotivoReporte {
   CONTENIDO_OFENSIVO
   VIOLACION_DERECHOS_AUTOR
   INFORMACION_ERRONEA
-  
+
   // Usuarios/Tutorías
   AUSENCIA_TUTOR
   COMPORTAMIENTO_INAPROPIADO
   SUPLANTACION_IDENTIDAD
   COBROS_INDEBIDOS
-  
+
   // Otros
   OTRO
 }

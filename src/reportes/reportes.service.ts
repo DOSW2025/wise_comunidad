@@ -172,12 +172,11 @@ export class ReportesService {
         );
         return;
 
-      case TipoEntidadReporte.MENSAJE_CHAT:
-        // TODO: Implementar cuando exista el modelo de chat
-        this.logger.warn(
-          `Validación de MENSAJE_CHAT pendiente - ID: ${entidadId}`,
-        );
-        return;
+      case TipoEntidadReporte.GRUPO_CHAT:
+        entity = await this.prisma.grupoChat.findUnique({
+          where: { id: entidadId },
+        });
+        break;
 
       default:
         throw new BadRequestException('Tipo de entidad no soportado');

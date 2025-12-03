@@ -24,6 +24,9 @@ describe('ReportesService', () => {
     tutoria: {
       findUnique: jest.fn(),
     },
+    grupoChat: {
+      findUnique: jest.fn(),
+    },
     reporte: {
       findFirst: jest.fn(),
       create: jest.fn(),
@@ -162,6 +165,66 @@ describe('ReportesService', () => {
         expect(result.success).toBe(true);
         expect(mockPrismaService.tutoria.findUnique).toHaveBeenCalledWith({
           where: { id_tutoria: 'tutoria-789' },
+        });
+      });
+
+      it('debe rechazar si el grupo de chat reportado no existe', async () => {
+        jest.clearAllMocks();
+        mockPrismaService.usuarios.findUnique.mockResolvedValue(mockReporter);
+        mockPrismaService.grupoChat.findUnique.mockResolvedValue(null);
+
+        const grupoChatReportDto: CreateReporteDto = {
+          tipoEntidad: TipoEntidadReporte.GRUPO_CHAT,
+          entidadId: 'grupo-inexistente',
+          motivo: MotivoReporte.CONTENIDO_OFENSIVO,
+          descripcion: 'Contenido inapropiado en el grupo de chat',
+        };
+
+        await expect(
+          service.create('reporter-123', grupoChatReportDto),
+        ).rejects.toThrow(NotFoundException);
+
+        expect(mockPrismaService.grupoChat.findUnique).toHaveBeenCalledWith({
+          where: { id: 'grupo-inexistente' },
+        });
+      });
+
+      it('debe aceptar reportar un grupo de chat existente (GRUPO_CHAT)', async () => {
+        jest.clearAllMocks();
+        const mockGrupoChat = {
+          id: 'grupo-chat-123',
+          nombre: 'Grupo de Cálculo',
+          creadoPor: 'user-456',
+          fechaCreacion: new Date(),
+        };
+
+        mockPrismaService.usuarios.findUnique.mockResolvedValue(mockReporter);
+        mockPrismaService.grupoChat.findUnique.mockResolvedValue(mockGrupoChat);
+        mockPrismaService.reporte.findFirst.mockResolvedValue(null);
+        mockPrismaService.reporte.create.mockResolvedValue({
+          id: 2,
+          tipoEntidad: TipoEntidadReporte.GRUPO_CHAT,
+          entidadId: 'grupo-chat-123',
+          motivo: MotivoReporte.CONTENIDO_OFENSIVO,
+          descripcion: 'Contenido inapropiado en el grupo',
+          estado: 'PENDIENTE',
+          reporter: mockReporter,
+        });
+        mockPrismaService.audit_log.create.mockResolvedValue({});
+
+        const grupoChatReportDto: CreateReporteDto = {
+          tipoEntidad: TipoEntidadReporte.GRUPO_CHAT,
+          entidadId: 'grupo-chat-123',
+          motivo: MotivoReporte.CONTENIDO_OFENSIVO,
+          descripcion: 'Contenido inapropiado en el grupo',
+        };
+
+        const result = await service.create('reporter-123', grupoChatReportDto);
+
+        expect(result.success).toBe(true);
+        expect(result.message).toContain('creado exitosamente');
+        expect(mockPrismaService.grupoChat.findUnique).toHaveBeenCalledWith({
+          where: { id: 'grupo-chat-123' },
         });
       });
 

@@ -23,7 +23,7 @@ export class PrismaService
 
     super({
       adapter,
-      log: ['error', 'warn'],
+      log: ['error', 'warn', 'query'],
     });
 
     this.pool = pool;
