@@ -173,6 +173,7 @@ model Materiales {
   nombre         String
   userId         String
   url            String
+  extension      String
   descripcion    String?
   vistos         Int              @default(0)
   descargas      Int              @default(0)
@@ -183,6 +184,9 @@ model Materiales {
   MaterialTags   MaterialTags[]
   usuarios       usuarios         @relation(fields: [userId], references: [id], onDelete: Cascade)
   Resumen        Resumen[]
+
+  @@index([userId])
+  @@index([extension])
 }
 
 model Resumen {

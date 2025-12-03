@@ -349,4 +349,39 @@ export class ChatsService {
 
     return mensajes;
   }
+
+  /**
+   * Obtiene todos los miembros de un grupo
+   * @param grupoId - ID del grupo
+   * @returns Lista de IDs de usuarios que son miembros del grupo
+   */
+  async getGroupMembers(grupoId: string): Promise<string[]> {
+    const miembros = await this.prisma.miembroGrupoChat.findMany({
+      where: { grupoId },
+      select: {
+        usuarioId: true,
+      },
+    });
+
+    return miembros.map(m => m.usuarioId);
+  }
+
+  /**
+   * Obtiene el nombre del grupo
+   * @param grupoId - ID del grupo
+   * @returns Nombre del grupo
+   * @throws NotFoundException si el grupo no existe
+   */
+  async getGroupName(grupoId: string): Promise<string> {
+    const grupo = await this.prisma.grupoChat.findUnique({
+      where: { id: grupoId },
+      select: { nombre: true },
+    });
+
+    if (!grupo) {
+      throw new NotFoundException('El grupo no existe');
+    }
+
+    return grupo.nombre;
+  }
 }

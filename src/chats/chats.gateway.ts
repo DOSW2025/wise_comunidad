@@ -16,15 +16,6 @@ import { ChatsService } from './chats.service';
 /**
  * Gateway de WebSockets para chat en tiempo real
  * Maneja conexiones autenticadas con JWT, mensajes y eventos de chat
- *
- * IMPORTANTE: Este gateway maneja autenticación JWT en WebSocket
- * El cliente debe enviar el token en el handshake:
- *
- * ```typescript
- * const socket = io('ws://localhost:3004/chat', {
- *   auth: { token: 'JWT_TOKEN' }
- * });
- * ```
  */
 @WebSocketGateway({
   cors: {
@@ -280,7 +271,7 @@ export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
       );
 
       // Emitir el mensaje a todos los miembros del grupo (incluyendo al emisor)
-      this.server.to(grupoId).emit('newMessage', {
+      const mensajeEmitido = {
         id: mensaje.id,
         grupoId: mensaje.grupoId,
         contenido: mensaje.contenido,
@@ -292,9 +283,15 @@ export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
           email: mensaje.usuario.email,
           avatar_url: mensaje.usuario.avatar_url,
         },
-      });
+      };
 
-      this.logger.log(`Mensaje enviado al grupo ${grupoId} por ${client.data.email}`,);
+      this.server.to(grupoId).emit('newMessage', mensajeEmitido);
+
+      this.logger.log(`Mensaje enviado al grupo ${grupoId} por ${client.data.email}`);
+      this.logger.log(`Contenido del evento newMessage: ${JSON.stringify(mensajeEmitido)}`);
+
+      // Detectar usuarios desconectados y enviar notificaciones
+      await this.notifyOfflineMembers(grupoId, mensaje);
 
       return {
         success: true,
@@ -307,6 +304,47 @@ export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
         success: false,
         message: error.message,
       };
+    }
+  }
+
+  /**
+   * Detecta qué miembros del grupo están desconectados y activa notificaciones
+   * @param grupoId - ID del grupo
+   * @param mensaje - El mensaje que se envió
+   */
+  private async notifyOfflineMembers(grupoId: string, mensaje: any) {
+    try {
+      // 1. Obtener todos los miembros del grupo
+      const todosMiembros = await this.chatsService.getGroupMembers(grupoId);
+
+      // 2. Obtener usuarios conectados al room del grupo
+      const socketsEnRoom = await this.server.in(grupoId).fetchSockets();
+      const usuariosConectados = socketsEnRoom.map(socket => socket.data.userId);
+
+      // 3. Identificar usuarios desconectados
+      const usuariosDesconectados = todosMiembros.filter(
+        miembroId => !usuariosConectados.includes(miembroId) && miembroId !== mensaje.usuarioId
+      );
+
+      if (usuariosDesconectados.length > 0) {
+        this.logger.log(`[NOTIFICACIONES] ${usuariosDesconectados.length} usuarios desconectados en grupo ${grupoId}`);
+
+        // Obtener nombre del grupo para la notificación
+        const nombreGrupo = await this.chatsService.getGroupName(grupoId);
+
+        // TODO: Implementación de llamado de notificación con Azure Service Bus
+        // Datos que se enviarán al Service Bus:
+        // - usuariosDesconectados: Array de IDs de usuarios que recibirán notificación
+        // - nombreGrupo: Nombre del grupo donde se envió el mensaje
+        // - mensaje: { id, contenido, usuario: { nombre, apellido, avatar_url }, fechaCreacion }
+
+        this.logger.debug(`[NOTIFICACION] Se deben notificar a ${usuariosDesconectados.length} usuarios sobre nuevo mensaje en "${nombreGrupo}"`);
+        this.logger.debug(`[NOTIFICACION] Usuarios a notificar: ${usuariosDesconectados.join(', ')}`);
+        this.logger.debug(`[NOTIFICACION] Remitente: ${mensaje.usuario.nombre} ${mensaje.usuario.apellido}`);
+        this.logger.debug(`[NOTIFICACION] Contenido: ${mensaje.contenido.substring(0, 50)}...`);
+      }
+    } catch (error) {
+      this.logger.error(`[NOTIFICACIONES] Error al detectar usuarios desconectados: ${error.message}`);
     }
   }
 
