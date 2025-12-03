@@ -140,6 +140,8 @@ model usuarios {
   tutoria_tutoria_tutorIdTousuarios   tutoria[]       @relation("tutoria_tutorIdTousuarios")
   estados_usuario                     estados_usuario @relation(fields: [estado_id], references: [id])
   roles                               roles           @relation(fields: [rol_id], references: [id])
+  threads                             Thread[]
+  replies                             Reply[]
 
   @@index([email])
   @@index([estado_id])
@@ -157,4 +159,47 @@ enum EstadoSesion {
 enum Modalidad {
   VIRTUAL
   PRESENCIAL
+}
+
+enum ThreadStatus {
+  open
+  closed
+  archived
+}
+
+model Thread {
+  id           String    @id @default(uuid())
+  author_id    String
+  title        String
+  content      String
+  status       ThreadStatus @default(open)
+  replies_count Int      @default(0)
+  views_count  Int       @default(0)
+  pinned       Boolean   @default(false)
+  created_at   DateTime  @default(now())
+  updated_at   DateTime?
+  deleted_at   DateTime?
+
+  author usuarios @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  replies Reply[]
+
+  @@index([author_id])
+  @@index([status])
+}
+
+model Reply {
+  id         String   @id @default(uuid())
+  thread_id  String
+  author_id  String
+  content    String
+  is_accepted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  deleted_at DateTime?
+
+  thread Thread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
+  author usuarios @relation(fields: [author_id], references: [id], onDelete: Cascade)
+
+  @@index([thread_id])
+  @@index([author_id])
 }
