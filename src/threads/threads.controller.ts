@@ -21,7 +21,7 @@ export class ThreadsController {
         message: 'Hilo creado',
         data: {
           id: '22222222-2222-2222-2222-222222222222',
-          author_id: '11111111-1111-1111-1111-111111111111',
+          author_id: '37292cf3-6a1a-4211-9b3f-7a82331d0965',
           title: 'Título de prueba válido con más de quince caracteres',
           content: 'Contenido de prueba del hilo. Debe tener al menos quince caracteres.',
           status: 'open',
@@ -47,7 +47,7 @@ export class ThreadsController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un hilo por id' })
   @ApiParam({ name: 'id', description: 'UUID del hilo', schema: { example: '22222222-2222-2222-2222-222222222222' } })
-  @ApiResponse({ status: 200, description: 'Hilo encontrado', schema: { example: { statusCode: 200, data: { id: '22222222-2222-2222-2222-222222222222', title: 'Título ejemplo', content: 'Contenido ejemplo', author_id: '11111111-1111-1111-1111-111111111111' } } } })
+  @ApiResponse({ status: 200, description: 'Hilo encontrado', schema: { example: { statusCode: 200, data: { id: '22222222-2222-2222-2222-222222222222', title: 'Título ejemplo', content: 'Contenido ejemplo', author_id: '37292cf3-6a1a-4211-9b3f-7a82331d0965' } } } })
   @ApiResponse({ status: 404, description: 'Hilo no encontrado', schema: { example: { statusCode: 404, message: 'Hilo no encontrado' } } })
   async findOne(@Param('id') id: string) {
     const thread = await this.threadsService.findOne(id);

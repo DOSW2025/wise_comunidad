@@ -23,11 +23,26 @@ export class ThreadsService {
     const titleTrunc = this.truncateTitle(normalizedTitle);
     this.logger.log(`Intento creación hilo - user_id=${authorId} title="${titleTrunc}"`);
 
-    // Verificar existencia del autor (authorId)
-    const author = await (this.prisma as any).usuarios.findUnique({ where: { id: authorId } });
+    // Verificar existencia del autor (authorId) e incluir rol/estado
+    const author = await (this.prisma as any).usuarios.findUnique({
+      where: { id: authorId },
+      include: { roles: true, estados_usuario: true },
+    });
     if (!author) {
       this.logger.warn(`Autor no encontrado - user_id=${authorId} title="${titleTrunc}"`);
       throw new BadRequestException('Autor no encontrado');
+    }
+
+    // Validar estado del usuario
+    if (author.estados_usuario && author.estados_usuario.activo === false) {
+      this.logger.warn(`Usuario en estado no activo - user_id=${authorId} estado=${author.estados_usuario.nombre}`);
+      throw new BadRequestException('Estado de usuario no permite crear hilos');
+    }
+
+    // Validar rol del usuario (debe existir y estar activo)
+    if (!author.roles || author.roles.activo === false) {
+      this.logger.warn(`Rol no permitido o inactivo - user_id=${authorId} rol=${author.roles?.nombre}`);
+      throw new BadRequestException('Rol de usuario no permite crear hilos');
     }
 
     // Duplicate check (exact match on author, title and content)
