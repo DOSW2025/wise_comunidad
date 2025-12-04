@@ -141,7 +141,7 @@ model usuarios {
   estados_usuario                     estados_usuario @relation(fields: [estado_id], references: [id])
   roles                               roles           @relation(fields: [rol_id], references: [id])
   threads                             Thread[]
-  replies                             Reply[]
+  responses                           responses[]
 
   @@index([email])
   @@index([estado_id])
@@ -181,13 +181,13 @@ model Thread {
   deleted_at   DateTime?
 
   author usuarios @relation(fields: [author_id], references: [id], onDelete: Cascade)
-  replies Reply[]
+  responses responses[]
 
   @@index([author_id])
   @@index([status])
 }
 
-model Reply {
+model responses {
   id         String   @id @default(uuid())
   thread_id  String
   author_id  String
