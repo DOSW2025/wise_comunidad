@@ -31,7 +31,7 @@ export class CreateThreadDto {
   content: string;
 
   @ApiProperty({
-    example: '11111111-1111-1111-1111-111111111111',
+    example: '37292cf3-6a1a-4211-9b3f-7a82331d0965',
     description: 'Identificador del autor (usuario existente). No se exige formato UUID.',
   })
   @IsString()
