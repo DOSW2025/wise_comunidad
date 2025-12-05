@@ -2,18 +2,22 @@ import 'dotenv/config';
 import * as joi from 'joi';
 
 interface EnvVars {
-  PORT: number;
-  DATABASE_URL: string;
-  DIRECT_URL?: string;
+    PORT: number;
+    DATABASE_URL: string;
+    DIRECT_URL?: string;
+    JWT_SECRET: string;
+    SERVICE_BUS_CONNECTION_STRING: string;
 }
 
 const envsSchema = joi
-  .object({
-    PORT: joi.number().required(),
-    DATABASE_URL: joi.string().required(),
-    DIRECT_URL: joi.string().optional(),
-  })
-  .unknown(true);
+    .object({
+        PORT: joi.number().required(),
+        DATABASE_URL: joi.string().required(),
+        DIRECT_URL: joi.string().optional(),
+        JWT_SECRET: joi.string().required(),
+        SERVICE_BUS_CONNECTION_STRING: joi.string().required(),
+    })
+    .unknown(true);
 
 const result = envsSchema.validate(process.env);
 
@@ -24,7 +28,9 @@ if (result.error) {
 const envVars = result.value as EnvVars;
 
 export const envs = {
-  port: envVars.PORT,
-  databaseurl: envVars.DATABASE_URL,
-  directurl: envVars.DIRECT_URL,
+    port: envVars.PORT,
+    databaseurl: envVars.DATABASE_URL,
+    directurl: envVars.DIRECT_URL,
+    jwtSecret: envVars.JWT_SECRET,
+    serviceBusConnectionString: envVars.SERVICE_BUS_CONNECTION_STRING,
 };

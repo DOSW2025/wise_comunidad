@@ -118,21 +118,24 @@ model tutoria {
 }
 
 model usuarios {
-  id                                  String          @id
-  email                               String          @unique
+  id                                  String             @id
+  email                               String             @unique
   nombre                              String
   apellido                            String
   telefono                            String?
-  semestre                            Int             @default(1)
-  ultimo_login                        DateTime?
-  created_at                          DateTime        @default(now())
-  updated_at                          DateTime
-  avatar_url                          String?
-  google_id                           String?         @unique
-  estado_id                           Int             @default(1)
-  rol_id                              Int             @default(1)
   biografia                           String?
+  semestre                            Int                @default(1)
+  google_id                           String?            @unique
+  avatar_url                          String?
+  rol_id                              Int                @default(1)
+  estado_id                           Int                @default(1)
+  ultimo_login                        DateTime?
   disponibilidad                      Json?
+  created_at                          DateTime           @default(now())
+  updated_at                          DateTime
+  Materiales                          Materiales[]
+  mensajesChat                        MensajeChat[]
+  miembrosGrupoChat                   MiembroGrupoChat[]
   notifications                       notifications[]
   rating                              rating[]
   tutor_profile                       tutor_profile?
@@ -146,6 +149,101 @@ model usuarios {
   @@index([email])
   @@index([estado_id])
   @@index([rol_id])
+}
+
+model Calificaciones {
+  id           Int        @id @default(autoincrement())
+  idMaterial   String
+  calificacion Int
+  comentario   String?
+  createdAt    DateTime   @default(now())
+  Materiales   Materiales @relation(fields: [idMaterial], references: [id], onDelete: Cascade)
+}
+
+model MaterialTags {
+  idTag      Int
+  idMaterial String
+  Materiales Materiales @relation(fields: [idMaterial], references: [id], onDelete: Cascade)
+  Tags       Tags       @relation(fields: [idTag], references: [id], onDelete: Cascade)
+
+  @@id([idTag, idMaterial])
+  @@index([idMaterial])
+}
+
+model Materiales {
+  id             String           @id
+  nombre         String
+  userId         String
+  url            String
+  extension      String
+  descripcion    String?
+  vistos         Int              @default(0)
+  descargas      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  hash           String?          @unique
+  updatedAt      DateTime
+  Calificaciones Calificaciones[]
+  MaterialTags   MaterialTags[]
+  usuarios       usuarios         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Resumen        Resumen[]
+
+  @@index([userId])
+  @@index([extension])
+}
+
+model Resumen {
+  id         Int        @id @default(autoincrement())
+  idMaterial String
+  resumen    String
+  Materiales Materiales @relation(fields: [idMaterial], references: [id], onDelete: Cascade)
+}
+
+model Tags {
+  id           Int            @id @default(autoincrement())
+  tag          String         @unique
+  MaterialTags MaterialTags[]
+}
+
+model GrupoChat {
+  id                 String             @id @default(uuid())
+  nombre             String             @unique
+  creadoPor          String
+  fechaCreacion      DateTime           @default(now())
+  fechaActualizacion DateTime           @updatedAt
+  mensajes           MensajeChat[]
+  miembros           MiembroGrupoChat[]
+
+  @@index([nombre])
+  @@map("grupo_chat")
+}
+
+model MiembroGrupoChat {
+  id         String    @id @default(uuid())
+  grupoId    String
+  usuarioId  String
+  fechaUnion DateTime  @default(now())
+  grupo      GrupoChat @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario    usuarios  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([grupoId, usuarioId])
+  @@index([usuarioId])
+  @@index([grupoId])
+  @@map("miembro_grupo_chat")
+}
+
+model MensajeChat {
+  id            String    @id @default(uuid())
+  grupoId       String
+  usuarioId     String
+  contenido     String
+  fechaCreacion DateTime  @default(now())
+  fechaEdicion  DateTime?
+  grupo         GrupoChat @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuario       usuarios  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([grupoId, fechaCreacion])
+  @@index([usuarioId])
+  @@map("mensaje_chat")
 }
 
 enum EstadoSesion {
