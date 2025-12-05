@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, UsePipes, ValidationPipe, HttpCode,
 import { ThreadsService } from './threads.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
+import { UpdateThreadDto } from './dto/update-thread.dto';
 
 @Controller('threads')
 @ApiTags('Threads')
@@ -52,5 +53,25 @@ export class ThreadsController {
   async findOne(@Param('id') id: string) {
     const thread = await this.threadsService.findOne(id);
     return { statusCode: 200, data: thread };
+  }
+
+  @Post(':id/like')
+  @ApiOperation({ summary: 'Dar like a un hilo' })
+  @ApiParam({ name: 'id', description: 'UUID del hilo' })
+  @ApiResponse({ status: 200, description: 'Like registrado' })
+  async like(@Param('id') id: string) {
+    const updated = await this.threadsService.like(id);
+    return { status: 'ok', likes: updated.likes_count };
+  }
+
+  @Post(':id/edit')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @ApiOperation({ summary: 'Editar un hilo (solo autor)' })
+  @ApiParam({ name: 'id', description: 'UUID del hilo' })
+  @ApiBody({ type: UpdateThreadDto })
+  @ApiResponse({ status: 200, description: 'Hilo actualizado' })
+  async update(@Param('id') id: string, @Body() dto: any) {
+    const updated = await this.threadsService.update(id, dto);
+    return { statusCode: 200, data: updated };
   }
 }

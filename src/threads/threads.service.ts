@@ -1,4 +1,5 @@
 import { Injectable, ConflictException, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { escapeHtml } from './utils/sanitize';
@@ -16,6 +17,7 @@ export class ThreadsService {
 
   async create(createDto: CreateThreadDto) {
     const { authorId, title, content } = createDto;
+    const forumId = (createDto as any).forumId;
 
     const normalizedTitle = title.replace(/\s+/g, ' ').trim();
     const normalizedContent = content.replace(/\s+/g, ' ').trim();
@@ -61,6 +63,29 @@ export class ThreadsService {
       throw new ConflictException('Hilo duplicado');
     }
 
+    // If forumId provided, ensure there is no other thread with the same title in that forum
+    if (forumId) {
+      const sameTitle = await (this.prisma as any).thread.findFirst({
+        where: {
+          forum_id: forumId,
+          title: normalizedTitle,
+        },
+      });
+      if (sameTitle) {
+        this.logger.warn(`Título duplicado en foro - forum_id=${forumId} title="${titleTrunc}"`);
+        throw new ConflictException('Ya existe un hilo con el mismo título en este foro');
+      }
+    }
+
+    // If forumId provided, validate forum exists
+    if (forumId) {
+      const forum = await (this.prisma as any).forum.findUnique({ where: { id: forumId } });
+      if (!forum) {
+        this.logger.warn(`Foro no encontrado - forum_id=${forumId} user_id=${authorId}`);
+        throw new BadRequestException('Foro no encontrado');
+      }
+    }
+
     // Sanitize data
     const safeTitle = escapeHtml(normalizedTitle);
     const safeContent = escapeHtml(normalizedContent);
@@ -72,6 +97,7 @@ export class ThreadsService {
           author_id: authorId,
           title: safeTitle,
           content: safeContent,
+          forum_id: forumId ? forumId : null,
         },
       });
 
@@ -83,15 +109,40 @@ export class ThreadsService {
   }
 
   async findOne(id: string) {
-    const thread = await (this.prisma as any).thread.findUnique({
+    // incrementar contador de vistas y devolver hilo con respuestas
+    const updated = await (this.prisma as any).thread.update({
       where: { id },
-      include: { replies: true },
+      data: { views_count: { increment: 1 } },
+      include: { responses: true },
     });
 
-    if (!thread) {
+    if (!updated) {
       throw new NotFoundException('Hilo no encontrado');
     }
 
-    return thread;
+    return updated;
+  }
+
+  async like(id: string) {
+    const updated = await (this.prisma as any).thread.update({
+      where: { id },
+      data: { likes_count: { increment: 1 } },
+    });
+    return updated;
+  }
+
+  async update(id: string, dto: { title?: string; content?: string; authorId?: string }) {
+    const { title, content, authorId } = dto as any;
+    const thread = await (this.prisma as any).thread.findUnique({ where: { id } });
+    if (!thread) throw new NotFoundException('Hilo no encontrado');
+    if (!authorId || thread.author_id !== authorId) {
+      throw new ForbiddenException('Solo el autor puede editar este hilo');
+    }
+
+    const safeTitle = title ? escapeHtml(title.replace(/\s+/g, ' ').trim()) : thread.title;
+    const safeContent = content ? escapeHtml(content.replace(/\s+/g, ' ').trim()) : thread.content;
+
+    const updated = await (this.prisma as any).thread.update({ where: { id }, data: { title: safeTitle, content: safeContent } });
+    return updated;
   }
 }

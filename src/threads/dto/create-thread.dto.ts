@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, MinLength, MaxLength, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength, MaxLength, IsUUID, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 function trimAndNormalize(value: any) {
@@ -37,4 +37,13 @@ export class CreateThreadDto {
   @IsString()
   @IsNotEmpty()
   authorId: string;
+
+  @ApiProperty({
+    example: '4f5c2d0a-0000-4000-8000-000000000000',
+    description: 'Identificador opcional del foro al que se asocia el hilo (si aplica)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  forumId?: string;
 }
