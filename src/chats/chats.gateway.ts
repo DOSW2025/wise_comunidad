@@ -330,30 +330,24 @@ export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
       if (usuariosDesconectados.length > 0) {
         this.logger.log(`[NOTIFICACIONES] ${usuariosDesconectados.length} usuarios desconectados en grupo ${grupoId}`);
 
-        // Obtener nombre del grupo para la notificación
+        // Obtener nombre del grupo e información de usuarios desconectados
         const nombreGrupo = await this.chatsService.getGroupName(grupoId);
-       
-        const notificacionDto: notificacionDto = {
-          template: TemplateNotificacionesEnum.NUEVO_MENSAJE,
-          resumen: `Nuevo mensaje en el grupo ${nombreGrupo}`,
-          email: 'farfanjohn1981@gmail.com', // Este campo se llenará en el servicio de notificaciones
-          nombreGrupo: nombreGrupo,
-          guardar: true,
-          mandarCorreo: false,
-        };
+        const emailsUsuariosDesconectados = await this.chatsService.getEmailsByUserIds(usuariosDesconectados);
 
-        // TODO: Implementación de llamado de notificación con Azure Service Bus
-        // Datos que se enviarán al Service Bus:
-        // - usuariosDesconectados: Array de IDs de usuarios que recibirán notificación
-        // - nombreGrupo: Nombre del grupo donde se envió el mensaje
-        // - mensaje: { id, contenido, usuario: { nombre, apellido, avatar_url }, fechaCreacion }
-        this.chatsService.sendNotificacionToServiceBus( notificacionDto);
-          
+        // Enviar notificación a cada usuario desconectado
+        for (const email of emailsUsuariosDesconectados) {
+          const notificacionDto: notificacionDto = {
+            template: TemplateNotificacionesEnum.NUEVO_MENSAJE,
+            resumen: `Mensaje de ${mensaje.usuario.nombre}:${mensaje.contenido.substring(0, 10)}...`,
+            email: email,
+            nombreGrupo: nombreGrupo,
+            guardar: true,
+            mandarCorreo: false,
+          };
 
-        this.logger.debug(`[NOTIFICACION] Se deben notificar a ${usuariosDesconectados.length} usuarios sobre nuevo mensaje en "${nombreGrupo}"`);
-        this.logger.debug(`[NOTIFICACION] Usuarios a notificar: ${usuariosDesconectados.join(', ')}`);
-        this.logger.debug(`[NOTIFICACION] Remitente: ${mensaje.usuario.nombre} ${mensaje.usuario.apellido}`);
-        this.logger.debug(`[NOTIFICACION] Contenido: ${mensaje.contenido.substring(0, 50)}...`);
+          await this.chatsService.sendNotificacionToServiceBus(notificacionDto);
+          this.logger.debug(`[NOTIFICACION] Notificación enviada a ${email}`);
+        }
       }
     } catch (error) {
       this.logger.error(`[NOTIFICACIONES] Error al detectar usuarios desconectados: ${error.message}`);

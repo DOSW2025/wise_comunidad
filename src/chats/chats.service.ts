@@ -393,6 +393,26 @@ export class ChatsService {
     return grupo.nombre;
   }
 
+  /**
+   * Obtiene los emails de usuarios a partir de sus IDs
+   * @param userIds - Array de IDs de usuarios
+   * @returns Array de emails de los usuarios
+   */
+  async getEmailsByUserIds(userIds: string[]): Promise<string[]> {
+    const usuarios = await this.prisma.usuarios.findMany({
+      where: {
+        id: {
+          in: userIds,
+        },
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    return usuarios.map(u => u.email);
+  }
+
   async sendNotificacionToServiceBus(notificacionDto: notificacionDto) {
     
     const Message : ServiceBusMessage= {
