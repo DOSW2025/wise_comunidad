@@ -1,11 +1,19 @@
 import { Injectable, BadRequestException, ConflictException, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
 import { CreateGroupDto, SendMessageDto } from './dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { ServiceBusClient, ServiceBusMessage } from '@azure/service-bus';
+import { notificacionDto, TemplateNotificacionesEnum } from './dto/notificacion.chat.dto';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prisma: PrismaService) {}
-   private readonly logger = new Logger(ChatsService.name);
+  private notification;  
+  constructor(private readonly prisma: PrismaService,
+              private readonly client: ServiceBusClient
+  ) { 
+    this.notification = this.client.createSender('mail.envio.individual');
+  }
+  
+  private readonly logger = new Logger(ChatsService.name);
   /**
    * Valida que todos los correos existan en la base de datos
    * @param emails - Lista de correos a validar
@@ -384,4 +392,14 @@ export class ChatsService {
 
     return grupo.nombre;
   }
+
+  async sendNotificacionToServiceBus(notificacionDto: notificacionDto) {
+    
+    const Message : ServiceBusMessage= {
+      body: notificacionDto,
+    }
+
+    await this.notification.sendMessages(Message);
+  }
 }
+

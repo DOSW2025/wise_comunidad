@@ -6,6 +6,7 @@ interface EnvVars {
     DATABASE_URL: string;
     DIRECT_URL?: string;
     JWT_SECRET: string;
+    SERVICE_BUS_CONNECTION_STRING: string;
 }
 
 const envsSchema = joi
@@ -14,6 +15,7 @@ const envsSchema = joi
         DATABASE_URL: joi.string().required(),
         DIRECT_URL: joi.string().optional(),
         JWT_SECRET: joi.string().required(),
+        SERVICE_BUS_CONNECTION_STRING: joi.string().required(),
     })
     .unknown(true);
 
@@ -30,4 +32,5 @@ export const envs = {
     databaseurl: envVars.DATABASE_URL,
     directurl: envVars.DIRECT_URL,
     jwtSecret: envVars.JWT_SECRET,
+    serviceBusConnectionString: envVars.SERVICE_BUS_CONNECTION_STRING,
 };

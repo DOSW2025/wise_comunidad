@@ -12,6 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ChatsService } from './chats.service';
+import { notificacionDto, TemplateNotificacionesEnum } from './dto/notificacion.chat.dto';
 
 /**
  * Gateway de WebSockets para chat en tiempo real
@@ -331,12 +332,23 @@ export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
 
         // Obtener nombre del grupo para la notificación
         const nombreGrupo = await this.chatsService.getGroupName(grupoId);
+       
+        const notificacionDto: notificacionDto = {
+          template: TemplateNotificacionesEnum.NUEVO_MENSAJE,
+          resumen: `Nuevo mensaje en el grupo ${nombreGrupo}`,
+          email: 'farfanjohn1981@gmail.com', // Este campo se llenará en el servicio de notificaciones
+          nombreGrupo: nombreGrupo,
+          guardar: true,
+          mandarCorreo: false,
+        };
 
         // TODO: Implementación de llamado de notificación con Azure Service Bus
         // Datos que se enviarán al Service Bus:
         // - usuariosDesconectados: Array de IDs de usuarios que recibirán notificación
         // - nombreGrupo: Nombre del grupo donde se envió el mensaje
         // - mensaje: { id, contenido, usuario: { nombre, apellido, avatar_url }, fechaCreacion }
+        this.chatsService.sendNotificacionToServiceBus( notificacionDto);
+          
 
         this.logger.debug(`[NOTIFICACION] Se deben notificar a ${usuariosDesconectados.length} usuarios sobre nuevo mensaje en "${nombreGrupo}"`);
         this.logger.debug(`[NOTIFICACION] Usuarios a notificar: ${usuariosDesconectados.join(', ')}`);
@@ -424,4 +436,5 @@ export class ChatsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
       userId,
     });
   }
+
 }
