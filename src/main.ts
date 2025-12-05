@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { envs } from './config/envs';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const logger = new Logger('ComunidadApp');
@@ -19,6 +20,13 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Wise Comunidad API')
+    .setDescription('Community API documentation')
+    .setVersion('1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api', app, document);
 
   // Configuración de Swagger
   const config = new DocumentBuilder()
@@ -75,5 +83,6 @@ async function bootstrap() {
   // Escuchar en 0.0.0.0 para permitir conexiones externas (necesario para Docker)
   await app.listen(envs.port, '0.0.0.0');
   logger.log(`Application is running on: ${envs.port}`);
+    console.log(`[INFO] Server is running on http://localhost:${envs.port}`);
 }
 bootstrap();
